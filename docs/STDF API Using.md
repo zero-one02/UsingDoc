@@ -144,7 +144,7 @@ public string LotNo { get; set; }
 
 ---
 
-## 2. 完整使用样例
+## 2. 使用样例
 
 ### 2.1 推荐用法：自动模式写入
 
@@ -192,7 +192,7 @@ class Program
 }
 ```
 
-#### 关键注释说明
+#### 关键说明
 
 - **属性标记**：用 `[STDF(STDFFieldName.XXX)]` 标记属性，自动映射 STDF 字段。
 - **Configure**：可选，链式配置写入行为。
@@ -234,7 +234,7 @@ class Program
 
 ---
 
-## 3. 典型交互流程
+## 3. 交互流程
 
 ```mermaid
 sequenceDiagram
@@ -247,15 +247,3 @@ sequenceDiagram
     Native/Converter-->>UserCode: 写入结果、日志
 ```
 
----
-
-## 4. 其他说明
-
-- **自动模式**：默认根据环境自动选择 Native/Converter，无需手动干预。
-- **可扩展性**：支持自定义填充器链，适配不同业务场景。
-- **属性丰富**：支持绝大多数 STDF 字段，详见 `STDFFieldName` 枚举。
-- **兼容性**：推荐使用 `STDFHelper`，部分旧 API 已标记为过时。
-
----
-
-如需更详细的类型定义或扩展用法，请参考源码中 `Simple/`, `Fillers/Builders/`, `NativeSTDFFiller/` 等相关实现。

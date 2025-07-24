@@ -2,21 +2,38 @@
 
 ## 1. 用户可调用的 API 及使用说明
 
-### 事件
+### 主要接口与类
 
-#### 请求接收事件
+#### IRemoteController 接口
+
+```csharp
+public interface IRemoteController : IDisposable
+{
+    event EventHandler<ResolveResult> RequestRecived;
+    Task NotifyStatusChange(StatusResponse status);
+    void StartListen();
+    void SendResponse(Response response, string token);
+}
+```
+- **说明**：远程控制器的标准接口，支持事件驱动的消息处理、状态通知、响应发送和监听启动。
+
+---
+
+#### 事件
+
+##### 请求接收事件
 
 ```csharp
 event EventHandler<ResolveResult> RequestRecived
 ```
-- **参数**：事件参数为 `ResolveResult`，包含请求类型、命令、token。
+- **参数**：事件参数为 `ResolveResult`，包含请求类型、命令、token、参数字典。
 - **说明**：当接收到客户端请求时触发。你可以通过订阅此事件来处理所有来自客户端的消息。
 
 ---
 
-### 方法
+#### 方法
 
-#### 通知客户端 OS 状态更新
+##### 通知客户端 OS 状态更新
 
 ```csharp
 Task NotifyStatusChange(StatusResponse status)
@@ -27,7 +44,7 @@ Task NotifyStatusChange(StatusResponse status)
 
 ---
 
-#### 启动监听
+##### 启动监听
 
 ```csharp
 void StartListen()
@@ -38,7 +55,7 @@ void StartListen()
 
 ---
 
-#### 发送响应到客户端
+##### 发送响应到客户端
 
 ```csharp
 void SendResponse(Response response, string token)
@@ -51,7 +68,7 @@ void SendResponse(Response response, string token)
 
 ---
 
-#### 释放资源
+##### 释放资源
 
 ```csharp
 void Dispose()
@@ -64,7 +81,7 @@ void Dispose()
 
 ### 关键数据类型
 
-#### 解析结果（请求信息）
+#### ResolveResult
 
 ```csharp
 public class ResolveResult
@@ -72,17 +89,19 @@ public class ResolveResult
     public RequestType Type { get; set; }
     public int Order { get; set; }
     public string Token { get; set; }
+    public Dictionary<string, string> Parameters { get; set; }
 
-    public ResolveResult(RequestType type, int order, string token);
+    public ResolveResult(RequestType type, int order, string token, Dictionary<string,string> parameters)
 }
 ```
 - **Type**：请求类型（`RequestType` 枚举，Query/Controller）
 - **Order**：请求命令（int，具体含义依赖于请求类型）
 - **Token**：客户端标识
+- **Parameters**：请求体参数字典
 
 ---
 
-#### 请求类型枚举
+#### RequestType
 
 ```csharp
 public enum RequestType
@@ -96,13 +115,13 @@ public enum RequestType
 
 ---
 
-#### 状态响应、通用响应
+#### StatusResponse、Response
 
 - `StatusResponse`、`Response` 类型分别代表状态变更响应和通用响应，需根据实际业务实现和序列化为 JSON 发送。
 
 ---
 
-## 2. 完整使用样例
+## 2. 使用样例
 
 ```csharp
 using Sandtek.OI.RemoteController;
@@ -123,7 +142,7 @@ class Program
             // 3. 订阅请求事件
             controller.RequestRecived += (sender, e) =>
             {
-                // e 为 ResolveResult，包含请求类型、命令、token
+                // e 为 ResolveResult，包含请求类型、命令、token、参数字典
                 if (e.Type == RequestType.Query)
                 {
                     // 处理查询请求
@@ -151,17 +170,17 @@ class Program
 }
 ```
 
-### 关键注释说明
+### 关键说明
 
 - **ILogger**：需实现日志接口，便于调试和运行时日志输出。
-- **RequestRecived 事件**：每当有客户端请求到达时触发，事件参数 `ResolveResult` 提供了请求类型、命令和 token。
+- **RequestRecived 事件**：每当有客户端请求到达时触发，事件参数 `ResolveResult` 提供了请求类型、命令、token 和参数字典。
 - **SendResponse**：通过 token 精确响应到对应客户端。
 - **StartListen**：必须调用，启动 WebSocket 服务监听。
 - **Dispose**：建议用 `using` 或手动调用，确保资源释放。
 
 ---
 
-## 3. 典型交互流程
+## 3. 交互流程
 
 ```mermaid
 sequenceDiagram
@@ -176,14 +195,3 @@ sequenceDiagram
     RemoteController->>Client: NotifyStatusChange（如有状态变更）
 ```
 
----
-
-## 4. 其他说明
-
-- **多客户端支持**：通过 token 区分不同客户端，支持并发连接。
-- **线程安全**：内部使用 ConcurrentDictionary/Queue，支持多线程环境。
-- **扩展性**：可自定义请求/响应体，适配不同业务场景。
-
----
-
-如需更详细的类型定义或扩展用法，请参考源码中 `Data/Requests`、`Data/Responses` 相关实现。

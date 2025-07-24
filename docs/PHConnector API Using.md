@@ -1,264 +1,290 @@
-# PHConnector 使用文档
+# PH Connector 使用文档
 
-## 1. 用户可调用 API 及使用说明
+## 1. 用户可调用的 API 及使用说明
 
-### 构造函数
+### 主要类
+
+#### PHConnector
 
 ```csharp
-public PHConnector(Com.Logger.ILogger logger)
+public class PHConnector : IDisposable
 ```
-- **参数**：`logger` 日志接口实例（可为 null）
-- **说明**：创建 PHConnector 实例，初始化共享内存映射。
+- **说明**：OI 与 Prober/Handler Driver 间的共享内存通信与节点控制主入口，支持节点注册、监听、卡控、测试模式切换等。
 
 ---
 
-### 监听相关
-
-#### 开始监听
+#### 构造函数
 
 ```csharp
-public bool StartListen()
+public PHConnector(ILogger logger)
 ```
-- **返回值**：`bool`，是否成功启动监听线程
-- **说明**：启动后台线程，监听共享内存中各项状态变化。监听到变化时会触发 `ListenItemChanged` 事件。
-
-#### 停止监听
-
-```csharp
-public void StopListenItems()
-```
-- **说明**：停止监听线程。
-
-#### 监听事件
-
-```csharp
-public event EventHandler<ListenItem> ListenItemChanged;
-```
-- **说明**：监听到关键项变化时触发，事件参数为 `ListenItem` 枚举，指示变化类型（如批次结束、比对失败等）。
+- **参数**：`logger` —— 日志对象，需实现 `ILogger` 接口。
+- **说明**：创建连接器实例，初始化共享内存和日志。
 
 ---
 
-### 模式与测试控制
-
-#### 设为常规模式
+#### 设置测试模式
 
 ```csharp
-public PHConnector SetNormalMode(out bool result)
+public PHConnector SetTestMode(TestMode testMode)
 ```
-- **参数**：`out bool result`，操作是否成功
-- **返回值**：自身实例（链式调用）
-- **说明**：将设备设置为常规（非手动）模式。
-
-#### 设为点测（手动）模式
-
-```csharp
-public PHConnector SetManualMode(out bool result)
-```
-- **参数**：`out bool result`，操作是否成功
+- **参数**：`testMode` —— 测试模式（枚举：Normal、ManualWithoutPH、ManualWithPH）
 - **返回值**：自身实例
-- **说明**：将设备设置为手动点测模式。
+- **说明**：设置当前测试模式。
+
+---
 
 #### 执行一次点测
 
 ```csharp
 public bool ExecuteSingleTest()
 ```
-- **返回值**：`bool`，操作是否成功
-- **说明**：触发一次单次测试。
+- **参数**：无
+- **返回值**：是否成功
+- **说明**：设置点测标志位，驱动执行一次点测。
+
+---
 
 #### 清除点测标志位
 
 ```csharp
 public bool ClearSingleTestFlag()
 ```
-- **返回值**：`bool`，操作是否成功
-- **说明**：清除单次测试标志。
+- **参数**：无
+- **返回值**：是否成功
+- **说明**：清除点测标志位。
 
 ---
 
-### 卡控项设置与忽略
-
-#### 设置批次号卡控
+#### 设置 FullSites 信息
 
 ```csharp
-public PHConnector SetLotNo(string lotno, out bool result)
+public void SetFullSite(List<int> fullSiteInfo)
 ```
-- **参数**：`lotno` 批次号字符串；`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：设置批次号卡控信息。
-
-#### 忽略批次号卡控
-
-```csharp
-public PHConnector IgnoreLotNoControl(out bool result)
-```
-- **参数**：`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：忽略批次号卡控。
-
-#### 设置设备名卡控
-
-```csharp
-public PHConnector SetDeviceName(string deviceName, out bool result)
-```
-- **参数**：`deviceName` 设备名字符串；`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：设置设备名卡控信息。
-
-#### 忽略设备名卡控
-
-```csharp
-public PHConnector IgnoreDeviceName(out bool result)
-```
-- **参数**：`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：忽略设备名卡控。
-
-#### 设置晶圆片号卡控
-
-```csharp
-public PHConnector SetWaferId(byte[] waferId, out bool result)
-```
-- **参数**：`waferId` 晶圆片号数组（byte[]，每个元素为片号）；`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：设置晶圆片号卡控信息。
-
-#### 忽略晶圆片号卡控
-
-```csharp
-public PHConnector IgnoreWaferId(out bool result)
-```
-- **参数**：`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：忽略晶圆片号卡控。
-
-#### 设置温度卡控
-
-```csharp
-public PHConnector SetTemperature(string temperature, out bool result)
-```
-- **参数**：`temperature` 温度字符串；`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：设置温度卡控信息。
-
-#### 忽略温度卡控
-
-```csharp
-public PHConnector IgnoreTemperature(out bool result)
-```
-- **参数**：`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：忽略温度卡控。
-
-#### 晶圆结束时阻塞/暂停
-
-```csharp
-public PHConnector HoldWhenWaferEnd(bool hold, out bool result)
-```
-- **参数**：`hold` 是否阻塞（true 阻塞，false 解除）；`out bool result` 操作是否成功
-- **返回值**：自身实例
-- **说明**：设置晶圆结束时是否阻塞。
+- **参数**：`fullSiteInfo` —— 需要开启的 site 位置列表（如 [1,2,5,7,8]）
+- **返回值**：无
+- **说明**：设置 FullSites 信息到共享内存。
 
 ---
 
-## 2. 完整使用样例
+#### 开始监听节点
+
+```csharp
+public bool StartListen()
+```
+- **参数**：无
+- **返回值**：监听是否开启成功
+- **说明**：启动后台线程，监听节点状态变化。
+
+---
+
+#### 停止监听节点
+
+```csharp
+public void StopListenItems()
+```
+- **参数**：无
+- **返回值**：无
+- **说明**：停止监听并清除所有节点。
+
+---
+
+#### 清除所有节点
+
+```csharp
+public PHConnector ClearAllNodes()
+```
+- **参数**：无
+- **返回值**：自身实例
+- **说明**：清除所有节点的挂起与注册回调。
+
+---
+
+#### 节点继续（解除挂起）
+
+```csharp
+public void NodeContinue(Node listenItem)
+```
+- **参数**：`listenItem` —— 节点类型（枚举：LotStart、LotEnd、WaferStart、WaferEnd、TestStart、TestEnd）
+- **返回值**：无
+- **说明**：解除指定节点的挂起状态。
+
+---
+
+#### 注册节点回调
+
+```csharp
+public PHConnector RegisterLotStart(Func<CallBackParameter, bool> func)
+public PHConnector RegisterLotEnd(Func<CallBackParameter, bool> func)
+public PHConnector RegisterWaferStart(Func<CallBackParameter, bool> func)
+public PHConnector RegisterWaferEnd(Func<CallBackParameter, bool> func)
+public PHConnector RegisterTestStart(Func<CallBackParameter, bool> func)
+public PHConnector RegisterTestEnd(Func<CallBackParameter, bool> func)
+```
+- **参数**：`func` —— 回调函数，参数为节点回调参数，返回值为是否继续流程
+- **返回值**：自身实例
+- **说明**：注册各节点的回调函数，节点到达时自动触发。
+
+---
+
+#### 注销节点回调
+
+```csharp
+public PHConnector UnRegisterLotStart()
+public PHConnector UnRegisterLotEnd()
+public PHConnector UnRegisterWaferStart()
+public PHConnector UnRegisterWaferEnd()
+public PHConnector UnRegisterTestStart()
+public PHConnector UnRegisterTestEnd()
+```
+- **参数**：无
+- **返回值**：自身实例
+- **说明**：注销对应节点的回调。
+
+---
+
+#### 资源释放
+
+```csharp
+public void Dispose()
+```
+- **参数**：无
+- **返回值**：无
+- **说明**：释放所有资源，停止监听。
+
+---
+
+### 关键类型
+
+#### TestMode
+
+```csharp
+public enum TestMode
+{
+    Normal,
+    ManualWithoutPH,
+    ManualWithPH
+}
+```
+- **说明**：测试模式枚举。
+
+---
+
+#### Node
+
+```csharp
+public enum Node
+{
+    LotStart,
+    LotEnd,
+    WaferStart,
+    WaferEnd,
+    TestStart,
+    TestEnd
+}
+```
+- **说明**：节点类型枚举。
+
+---
+
+#### CallBackParameter
+
+```csharp
+public class CallBackParameter
+{
+    public string LotNo { get; set; }
+    public string DeviceName { get; set; }
+    public string WaferNo { get; set; }
+    public string Temperature { get; set; }
+    public string GetAllProperties();
+}
+```
+- **说明**：节点回调参数，包含批次号、设备名、片号、温度等。
+
+---
+
+## 2. 使用样例
 
 ```csharp
 using Sandtek.OI.PHConnector;
-using Sandtek.OI.Com.Logger; // 假设有 ILogger 实现
+using Sandtek.OI.Com.Logger;
 
-class Program
+public class ApplicationClass
 {
-    static void Main()
+    private ILogger _logger;
+    private PHConnector _phConnector;
+
+    public ApplicationClass()
     {
-        // 1. 创建日志实例（可为 null）
-        ILogger logger = new ConsoleLogger();
+        _logger = new LoggerBuilder();
+        _phConnector = new PHConnector(_logger);
+        _phConnector.SetTestMode(TestMode.Normal);
+    }
 
-        // 2. 创建 PHConnector 实例
-        var connector = new PHConnector(logger);
-
-        // 3. 订阅监听事件
-        connector.ListenItemChanged += (sender, item) =>
+    public void AfterLoad()
+    {
+        // 注册开批节点回调
+        _phConnector.RegisterLotStart(callBackParameter =>
         {
-            switch (item)
+            _logger?.Info("LotStart triggered");
+            string expectedLotNumber = "lotNumber";
+            if (callBackParameter.LotNo != expectedLotNumber)
             {
-                case ListenItem.LotEnd:
-                    Console.WriteLine("检测到结批信号，处理结批逻辑");
-                    break;
-                case ListenItem.LotNoResult:
-                    Console.WriteLine("批次号比对失败，处理异常");
-                    break;
-                case ListenItem.DeviceNameResult:
-                    Console.WriteLine("设备名比对失败，处理异常");
-                    break;
-                case ListenItem.WaferIdResult:
-                    Console.WriteLine("晶圆片号比对失败，处理异常");
-                    break;
-                case ListenItem.TemperatureResult:
-                    Console.WriteLine("温度超限，处理异常");
-                    break;
-                case ListenItem.WaferEndSignal:
-                    Console.WriteLine("检测到晶圆结束信号，处理逻辑");
-                    break;
+                _logger?.Error($"Lot number mismatch, expected:{expectedLotNumber}, Actual:{callBackParameter.LotNo}");
+                _phConnector.ClearAllNodes();
+                return false;
             }
-        };
+            return true;
+        });
 
-        // 4. 启动监听
-        if (connector.StartListen())
+        // 注册结批节点回调
+        _phConnector.RegisterLotEnd(x =>
         {
-            Console.WriteLine("监听已启动");
-        }
+            _logger?.Info("LotEnd triggered");
+            // 结束测试
+            // StopCommand();
+            _phConnector.ClearAllNodes();
+            return true;
+        });
 
-        // 5. 设置批次号和设备名卡控
-        connector.SetLotNo("LOT12345", out bool lotNoResult)
-                 .SetDeviceName("DEV001", out bool deviceResult);
+        // 启动监听
+        _logger?.Info("Start listening connector nodes");
+        _phConnector.StartListen();
+    }
 
-        // 6. 忽略设备名卡控
-        connector.IgnoreDeviceName(out bool ignoreDeviceResult);
-
-        // 7. 设置为手动点测模式并执行一次点测
-        connector.SetManualMode(out bool manualModeResult);
-        if (manualModeResult)
-        {
-            connector.ExecuteSingleTest();
-        }
-
-        // 8. 停止监听（如需退出时）
-        connector.StopListenItems();
+    public void AfterLotEnd()
+    {
+        // 测试结束后清理
+        _phConnector.ClearAllNodes();
+        _phConnector.StopListenItems();
+        _logger?.Info("Clear connector nodes and stop listening");
     }
 }
 ```
 
-### 关键注释说明
+### 关键说明
 
-- **ListenItemChanged 事件**：监听共享内存关键项变化，需订阅处理。
-- **链式调用**：如 `SetLotNo().SetDeviceName()` 支持链式设置。
-- **out 参数**：所有设置/忽略方法均通过 `out bool result` 返回操作是否成功。
-- **模式切换**：`SetNormalMode`/`SetManualMode` 控制设备工作模式。
-- **点测控制**：`ExecuteSingleTest` 触发一次点测，`ClearSingleTestFlag` 清除标志。
-- **监听线程**：`StartListen`/`StopListenItems` 控制监听线程生命周期。
+- **注册节点回调**：通过 `RegisterLotStart`、`RegisterLotEnd` 等方法注册节点到达时的处理逻辑。
+- **回调参数**：`CallBackParameter` 提供当前节点相关的 LotNo、DeviceName、WaferNo、Temperature 等信息。
+- **流程控制**：回调返回 `true` 表示流程继续，`false` 表示流程暂停或中断。
+- **监听与清理**：`StartListen` 启动监听，`ClearAllNodes`/`StopListenItems` 用于流程结束后的清理。
 
 ---
 
-## 3. ListenItem 枚举说明
+## 3. 交互流程
 
-| 枚举值            | 说明             |
-| ----------------- | ---------------- |
-| LotEnd            | 结批信号         |
-| LotNoResult       | 批次号比对结果   |
-| DeviceNameResult  | 设备名比对结果   |
-| WaferIdResult     | 晶圆片号比对结果 |
-| TemperatureResult | 温度比对结果     |
-| WaferEndSignal    | 晶圆结束信号     |
+```mermaid
+sequenceDiagram
+    participant OI
+    participant PHConnector
+    participant Driver
 
----
+    OI->>PHConnector: 注册节点回调
+    OI->>PHConnector: StartListen
+    Driver->>PHConnector: 节点信号（如LotStart）
+    PHConnector->>OI: 触发回调（带参数）
+    OI->>PHConnector: 回调返回（true/false）
+    PHConnector->>Driver: NodeContinue（如流程继续）
+    OI->>PHConnector: ClearAllNodes/StopListenItems（流程结束）
+```
 
-## 4. 典型应用场景
-
-- **自动化测试流程**：通过共享内存与外部设备（如 Prober/Handler）交互，自动控制批次、设备、温度等卡控项。
-- **异常监控与处理**：实时监听比对结果，及时响应异常信号，提升自动化产线的可靠性。
-- **手动点测与调试**：支持切换手动模式，便于调试和特殊场景下的人工干预。
-
----
-
-如需更详细的底层实现或扩展用法，请参考源码注释及 `ShareMemItem.cs` 内部枚举定义。
